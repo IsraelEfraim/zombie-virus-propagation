@@ -13,7 +13,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-/* Jade */
+/* JADE imports */
 
 public class Launcher extends Application {
 

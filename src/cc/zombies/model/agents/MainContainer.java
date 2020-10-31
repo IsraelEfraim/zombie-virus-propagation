@@ -37,6 +37,6 @@ public class MainContainer {
     }
 
     public static void start() throws ControllerException {
-        MainContainer instance = MainContainer.getInstance();
+        MainContainer.getInstance();
     }
 }
