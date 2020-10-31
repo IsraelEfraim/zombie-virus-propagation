@@ -19,13 +19,13 @@ public class Launcher extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        MainContainer.start();
+        //MainContainer.start();
 
-        SimulationContainer container = new SimulationContainer("zombie-virus-propagation");
+        //SimulationContainer container = new SimulationContainer("zombie-virus-propagation");
 
         Parent root = FXMLLoader.load(getClass().getResource("view/ApplicationScene.fxml"));
-        primaryStage.setTitle("Hello World");
-        primaryStage.setScene(new Scene(root, 640, 400));
+        primaryStage.setTitle("Zombie Virus Propagation");
+        primaryStage.setScene(new Scene(root, 512, 512));
         primaryStage.show();
     }
 
