@@ -1,14 +1,8 @@
 package cc.zombies.model.agents.figures;
 
 /* CC imports */
-import cc.zombies.model.agents.figures.base.LocatedAgent;
+import cc.zombies.model.agents.figures.base.SimulatedAgent;
 
-/* Java imports */
-
-/* JavaFX imports */
-
-/* JADE imports */
-
-public class Warrior extends LocatedAgent {
+public class Warrior extends SimulatedAgent {
     protected void setup() {}
 }

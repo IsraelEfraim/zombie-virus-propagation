@@ -1,28 +1,23 @@
 package cc.zombies.model.agents;
 
-/* CC imports */
-
-/* Java imports */
-
-/* JavaFX imports */
-
 /* JADE imports */
 import jade.core.Runtime;
 import jade.core.ProfileImpl;
 import jade.util.ExtendedProperties;
-import jade.wrapper.ContainerController;
+import jade.wrapper.AgentContainer;
 import jade.wrapper.ControllerException;
 
 public class MainContainer {
     private static Runtime runtime = Runtime.instance();
     private static MainContainer instance;
 
-    private ContainerController container;
+    private AgentContainer container;
     private ProfileImpl profile;
 
     private MainContainer() throws ControllerException {
-        this.profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:true" }));
+        this.profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:false" }));
         this.container = runtime.createMainContainer(this.profile);
+        this.container.start();
     }
 
     private static void setInstance(MainContainer instance) {

@@ -1,14 +1,14 @@
 package cc.zombies.model.agents.figures;
 
 /* CC imports */
-import cc.zombies.model.agents.figures.base.LocatedAgent;
+import cc.zombies.model.agents.figures.base.SimulatedAgent;
+import cc.zombies.model.behaviours.MoveAround;
 
-/* Java imports */
+// @TODO: modificar a classe
+public class Runner extends SimulatedAgent {
+    protected void setup() {
+        this.setSpeed(0.0005);
+        this.addBehaviour(new MoveAround(this));
 
-/* JavaFX imports */
-
-/* JADE imports */
-
-public class Runner extends LocatedAgent {
-    protected void setup() {}
+    }
 }

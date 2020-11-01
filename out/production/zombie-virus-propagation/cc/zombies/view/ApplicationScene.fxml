@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.canvas.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
@@ -12,6 +13,7 @@
                         <Image url="@assets/img/background/bg.jpg" />
                     </image>
                 </ImageView>
+            <Canvas fx:id="canvas" height="512.0" width="512.0" />
             </children>
         </StackPane>
     </children>

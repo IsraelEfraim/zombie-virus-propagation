@@ -1,23 +1,17 @@
 package cc.zombies.model.agents;
 
-/* CC imports */
-
-/* Java imports */
-
-/* JavaFX imports */
-
 /* JADE imports */
 import jade.core.Runtime;
 import jade.core.ProfileImpl;
 import jade.util.ExtendedProperties;
-import jade.wrapper.ContainerController;
+import jade.wrapper.AgentContainer;
 import jade.wrapper.ControllerException;
 
 public class SimulationContainer {
     private static Runtime runtime = Runtime.instance();
 
     private String name;
-    private ContainerController container;
+    private AgentContainer container;
     private ProfileImpl profile;
 
     public SimulationContainer(String name) throws ControllerException {
@@ -26,6 +20,7 @@ public class SimulationContainer {
         this.container = runtime.createAgentContainer(this.profile);
     }
 
-
-
+    public AgentContainer getContainer() {
+        return this.container;
+    }
 }
