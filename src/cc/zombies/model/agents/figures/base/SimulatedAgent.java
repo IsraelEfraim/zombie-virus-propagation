@@ -8,7 +8,9 @@ import cc.zombies.model.geom.Polygon;
 import java.util.UUID;
 
 /* JADE imports */
+import jade.core.AID;
 import jade.core.Agent;
+import jade.lang.acl.ACLMessage;
 
 public abstract class SimulatedAgent extends Agent {
     private Polygon bounds;
@@ -27,15 +29,23 @@ public abstract class SimulatedAgent extends Agent {
         this.setAwarenessRadius(awarenessRadius);
     }
 
-    public SimulatedAgent(Coordinate coordinate) {
-        this.setCoordinate(coordinate);
-        this.setUuid(this.randomUUID());
-    }
-
     public SimulatedAgent() {
         this.setCoordinate(new Coordinate(0,0));
         this.setUuid(this.randomUUID());
     }
+
+    // @TODO Checar se vamos manter essa função
+    /*public void sendPositionUpdate() {
+        var message = new ACLMessage(ACLMessage.INFORM);
+        var coordinate = this.getCoordinate();
+
+        message.addReceiver(new AID("position-receptor", AID.ISLOCALNAME));
+        message.setLanguage("English");
+        message.setOntology("position-update");
+        message.setContent(String.format("%s %.10f %.10f", this.getUuid(), coordinate.getX(), coordinate.getY()));
+
+        this.send(message);
+    }*/
 
     public Polygon getBounds() {
         return bounds;

@@ -24,4 +24,8 @@ public class Coordinate {
     public void setY(double y) {
         this.y = y;
     }
+
+    public static Coordinate from(double x, double y) {
+        return new Coordinate(x, y);
+    }
 }

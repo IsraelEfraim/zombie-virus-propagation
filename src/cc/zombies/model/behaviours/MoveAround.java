@@ -40,6 +40,9 @@ public class MoveAround extends Behaviour {
                 this.control = 0;
             }
         }
+
+        // @TODO Checar se vamos manter essa função
+        /*sa.sendPositionUpdate();*/
     }
 
     @Override

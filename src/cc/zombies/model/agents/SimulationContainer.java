@@ -20,7 +20,7 @@ public class SimulationContainer {
         this.container = runtime.createAgentContainer(this.profile);
     }
 
-    public AgentContainer getContainer() {
+    public AgentContainer getAgentContainer() {
         return this.container;
     }
 }
