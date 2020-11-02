@@ -1,7 +1,9 @@
 package cc.zombies.model.behaviours;
 
+/* CC imports */
+import cc.zombies.model.agents.figures.base.SimulatedAgent;
+
 /* JADE imports */
-import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 
 /* @TODO Implementar Communicate
@@ -14,7 +16,7 @@ import jade.core.behaviours.Behaviour;
  * queryNearbyThreats() -> Map<String, Coordinate>
  * queryNearbyAllies() -> Map<String, Coordinate>
  *
- * send Threats each Ally
+ * send Threats collection to each Ally
  *
  * on receive
  * Replace each uuid with new position if receiving epoch > epoch
@@ -23,8 +25,11 @@ import jade.core.behaviours.Behaviour;
  * epoch = System.currentTimeMillis;
  */
 public class Communicate extends Behaviour {
-    public Communicate(Agent a) {
+    private SimulatedAgent agent;
+
+    public Communicate(SimulatedAgent a) {
         super(a);
+        this.agent = agent;
     }
 
     @Override

@@ -12,8 +12,11 @@ import jade.core.behaviours.Behaviour;
  * slay() -> void; if position in sight
  */
 public class Hunt extends Behaviour {
+    private SimulatedAgent agent;
+
     public Hunt(SimulatedAgent a) {
         super(a);
+        this.agent = a;
     }
 
     @Override

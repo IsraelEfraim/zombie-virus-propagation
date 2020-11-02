@@ -1,10 +1,12 @@
 package cc.zombies.model.agents;
 
 /* JADE imports */
+import jade.core.Agent;
 import jade.core.Runtime;
 import jade.core.ProfileImpl;
 import jade.util.ExtendedProperties;
 import jade.wrapper.AgentContainer;
+import jade.wrapper.AgentController;
 import jade.wrapper.ControllerException;
 
 public class MainContainer {
@@ -33,5 +35,12 @@ public class MainContainer {
 
     public static void start() throws ControllerException {
         MainContainer.getInstance();
+    }
+
+    public static void end() throws ControllerException {
+        if (MainContainer.instance != null) {
+            MainContainer.getInstance().container.kill();
+            MainContainer.runtime.shutDown();
+        }
     }
 }

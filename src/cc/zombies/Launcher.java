@@ -14,6 +14,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /* JavaFX imports */
+import com.sun.tools.javac.Main;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -41,6 +42,8 @@ public class Launcher extends Application {
         }
     }
 
+    /* JavaFX attributes */
+
     private Parent root;
     
     @FXML
@@ -48,12 +51,16 @@ public class Launcher extends Application {
 
     private GraphicsContext gc;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        MainContainer.start();
-        SimulationContainer container = new SimulationContainer("zombie-virus-propagation");
-        container.getAgentContainer().start();
+    /* Jade attributes */
+    SimulationContainer container;
 
+    private void setupJade() throws Exception {
+        MainContainer.start();
+        this.container = new SimulationContainer("zombie-virus-propagation");
+        this.container.getAgentContainer().start();
+    }
+
+    private void setupUi(Stage primaryStage) throws Exception {
         var loader = new FXMLLoader(getClass().getResource("view/ApplicationScene.fxml"));
         loader.setController(this);
         this.root = loader.load();
@@ -63,14 +70,32 @@ public class Launcher extends Application {
         primaryStage.show();
 
         this.gc = canvas.getGraphicsContext2D();
+    }
 
-        // @TODO Remover todo o teste
+    private void setupEvents(Stage primaryStage) throws Exception {
+        primaryStage.setOnCloseRequest((event) -> {
+            try {
+                this.container.getAgentContainer().kill();
+                MainContainer.end();
+            }
+            catch (Exception e) {
+                System.out.println("Launcher#setupEvents where couldn't end JADE properly");
+            }
+        });
+    }
+
+    // @TODO Remover
+    private void doTests() {
+        /* Setup runners array */
         var runners = new ArrayList<AgentPair>();
+
+        /* Setup runner spawn point: one coordinate for each unique runner */
         var coordinates = new Coordinate[] {
                 Coordinate.from(256, 256), Coordinate.from(100, 100),
                 Coordinate.from(70, 80), Coordinate.from(400, 300)
         };
 
+        /* Instantiate runners and controllers */
         for (int i = 0; i < coordinates.length; ++i) {
             try {
                 var runner = new Runner(
@@ -85,6 +110,7 @@ public class Launcher extends Application {
             }
         }
 
+        /* Start UI update background thread */
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -96,18 +122,45 @@ public class Launcher extends Application {
                     runners.forEach((pair) -> {
                         var agent = pair.agent;
                         gc.fillOval(agent.getCoordinate().getX(), agent.getCoordinate().getY(),
-                                    15 ,15);
+                                15 ,15);
                     });
                 });
             }
         }, 0, 30);
 
+        /* Dispatch controllers start */
         runners.forEach((pair) -> {
             try {
                 pair.controller.start();
             }
             catch (Exception ignore) {}
         });
+    }
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        /* Setup JADE in another Thread */
+        var jadeJob = new Thread(() -> {
+            try {
+                this.setupJade();
+            }
+            catch (Exception ignore) {}
+        });
+        jadeJob.start();
+
+        /* Setup User UI */
+        this.setupUi(primaryStage);
+
+        /* Run tests */
+        new Thread(() -> {
+            try {
+                jadeJob.join();
+                this.doTests();
+            }
+            catch (Exception e) {
+                System.out.println("Launcher#start where jadeJob thread failed");
+            }
+        }).start();
     }
 
     public static void main(String[] args) {
