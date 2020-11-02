@@ -14,7 +14,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /* JavaFX imports */
-import com.sun.tools.javac.Main;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -32,7 +31,7 @@ import jade.wrapper.StaleProxyException;
 
 public class Launcher extends Application {
     // @TODO Melhorar elegância da solução
-    private class AgentPair {
+    private static class AgentPair {
         public SimulatedAgent agent;
         public AgentController controller;
 
@@ -150,6 +149,7 @@ public class Launcher extends Application {
 
         /* Setup User UI */
         this.setupUi(primaryStage);
+        this.setupEvents(primaryStage);
 
         /* Run tests */
         new Thread(() -> {
