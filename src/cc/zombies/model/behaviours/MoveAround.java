@@ -3,50 +3,86 @@ package cc.zombies.model.behaviours;
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
 import cc.zombies.model.geom.Coordinate;
+import cc.zombies.model.random.RandomHelper;
 
 /* Java imports */
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /* JADE imports */
-import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
 
-// @TODO: modificar a classe
+// @TODO Código operante, mover para uma classe com comportamento condicional
 public class MoveAround extends Behaviour {
-    private List<Coordinate> path = new ArrayList<>();
-    private int control;
+    private SimulatedAgent agent;
+    private List<Coordinate> path;
+    private double[] kernel;
 
-    public MoveAround(Agent a) {
+    public MoveAround(SimulatedAgent a) {
         super(a);
-        SimulatedAgent sa = (SimulatedAgent) a;
-        this.path.add(new Coordinate(sa.getCoordinate().getX() + 50, sa.getCoordinate().getY()));
-        this.path.add(new Coordinate(sa.getCoordinate().getX() - 50, sa.getCoordinate().getY()));
-        this.control = 0;
+        this.agent = (SimulatedAgent) myAgent;
+        this.path = new LinkedList<>();
+        this.kernel = new double[] { 0.319466, 0.361069, 0.319466 };
     }
 
     @Override
     public void action() {
-        SimulatedAgent sa = (SimulatedAgent)myAgent;
-        if (this.control == 0) {
-            sa.setCoordinate(new Coordinate(sa.getCoordinate().getX() + sa.getSpeed(), sa.getCoordinate().getY()));
-            if (sa.getCoordinate().getX() >= this.path.get(0).getX()) {
-                this.control = 1;
-            }
-
-        } else {
-            sa.setCoordinate(new Coordinate(sa.getCoordinate().getX() - sa.getSpeed(), sa.getCoordinate().getY()));
-            if (sa.getCoordinate().getX() <= this.path.get(1).getX()) {
-                this.control = 0;
-            }
+        if (this.path.isEmpty()) {
+            this.generateRandomPath();
         }
 
-        // @TODO Checar se vamos manter essa função
-        /*sa.sendPositionUpdate();*/
+        var nextPosition = this.path.stream().findFirst().get();
+        this.agent.moveInDirectionOf(nextPosition);
+
+        if (this.agent.reached(nextPosition, this.agent.getSpeed() * 1.1)) {
+            this.path.remove(0);
+        }
     }
 
     @Override
     public boolean done() {
         return false;
+    }
+
+    protected void generateRandomPath() {
+        if (this.path.isEmpty()) {
+            var position = this.agent.getCoordinate();
+            // @TODO Refatorar para que a quantidade de passos seja configurável
+            var count = 3;
+
+            /* Generate path points */
+            for (var idx = 0; idx < count; ++idx) {
+                var newPosition = new Coordinate(0, 0);
+                do {
+                    newPosition.setX(
+                            RandomHelper.doubleWithin(position.getX() - this.agent.getAwarenessRadius(),
+                                    position.getX() + this.agent.getAwarenessRadius())
+                    );
+
+                    newPosition.setY(
+                            RandomHelper.doubleWithin(position.getY() - this.agent.getAwarenessRadius(),
+                                    position.getY() + this.agent.getAwarenessRadius())
+                    );
+                } while (!this.agent.canMoveTo(newPosition));
+                this.path.add(newPosition);
+
+                position = newPosition;
+            }
+
+            // @TODO Remover responsabilidade de suavizar desta classe
+
+            /* Smooth point in the middle */
+            this.path.get(1).setX(
+                this.path.get(0).getX() * this.kernel[0] +
+                this.path.get(1).getX() * this.kernel[1] +
+                this.path.get(2).getX() * this.kernel[2]
+            );
+
+            this.path.get(1).setY(
+                    this.path.get(0).getY() * this.kernel[0] +
+                    this.path.get(1).getY() * this.kernel[1] +
+                    this.path.get(2).getY() * this.kernel[2]
+            );
+        }
     }
 }

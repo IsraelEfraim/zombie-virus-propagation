@@ -50,6 +50,10 @@ public class Launcher extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
+        MainContainer.start();
+        SimulationContainer container = new SimulationContainer("zombie-virus-propagation");
+        container.getAgentContainer().start();
+
         var loader = new FXMLLoader(getClass().getResource("view/ApplicationScene.fxml"));
         loader.setController(this);
         this.root = loader.load();
@@ -60,21 +64,18 @@ public class Launcher extends Application {
 
         this.gc = canvas.getGraphicsContext2D();
 
-        MainContainer.start();
-        SimulationContainer container = new SimulationContainer("zombie-virus-propagation");
-        container.getAgentContainer().start();
-
-        // @TODO: remover todo o teste
-
+        // @TODO Remover todo o teste
         var runners = new ArrayList<AgentPair>();
-
-        var coordinates = new Coordinate[] { Coordinate.from(256, 256), Coordinate.from(100, 100) };
+        var coordinates = new Coordinate[] {
+                Coordinate.from(256, 256), Coordinate.from(100, 100),
+                Coordinate.from(70, 80), Coordinate.from(400, 300)
+        };
 
         for (int i = 0; i < coordinates.length; ++i) {
             try {
                 var runner = new Runner(
                         Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0),
-                        coordinates[i], 0.0001, 0.0, 512 * 0.2
+                        coordinates[i], 0.0005, 0.0, 512 * 0.2
                 );
                 var controller = container.getAgentContainer().acceptNewAgent("Runner" + i, runner);
 
@@ -90,7 +91,7 @@ public class Launcher extends Application {
             public void run() {
                 Platform.runLater(() -> {
                     gc.clearRect(0,0, canvas.getWidth(), canvas.getHeight());
-                    gc.setFill(Color.BLUE);
+                    gc.setFill(Color.LIGHTPINK);
 
                     runners.forEach((pair) -> {
                         var agent = pair.agent;

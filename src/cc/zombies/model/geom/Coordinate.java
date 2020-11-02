@@ -28,4 +28,9 @@ public class Coordinate {
     public static Coordinate from(double x, double y) {
         return new Coordinate(x, y);
     }
+
+    @Override
+    public String toString() {
+        return String.format("Coordinate{x:%.5f,y:%.5f}", x, y);
+    }
 }
