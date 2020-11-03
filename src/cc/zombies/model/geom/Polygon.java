@@ -46,8 +46,6 @@ public class Polygon {
 
     @Override
     public String toString() {
-        return "Polygon{" +
-                "vertex=" + Arrays.toString(vertex) +
-                '}';
+        return String.format("Polygon{vertex:%s}", Arrays.toString(vertex));
     }
 }

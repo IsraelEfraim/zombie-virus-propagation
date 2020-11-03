@@ -25,11 +25,11 @@ import jade.core.behaviours.Behaviour;
  * epoch = System.currentTimeMillis;
  */
 public class Communicate extends Behaviour {
-    private SimulatedAgent agent;
+    private final SimulatedAgent agent;
 
     public Communicate(SimulatedAgent a) {
         super(a);
-        this.agent = agent;
+        this.agent = a;
     }
 
     @Override

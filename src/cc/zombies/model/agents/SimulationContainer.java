@@ -5,22 +5,21 @@ import jade.core.Runtime;
 import jade.core.ProfileImpl;
 import jade.util.ExtendedProperties;
 import jade.wrapper.AgentContainer;
-import jade.wrapper.ControllerException;
 
 public class SimulationContainer {
-    private static Runtime runtime = Runtime.instance();
+    private static final Runtime runtime = Runtime.instance();
 
-    private String name;
-    private AgentContainer container;
-    private ProfileImpl profile;
+    private final String name;
+    private final AgentContainer container;
+    private final ProfileImpl profile;
 
-    public SimulationContainer(String name) throws ControllerException {
+    public SimulationContainer(String name) {
         this.name = name;
         this.profile = new ProfileImpl(new ExtendedProperties(new String[]{ "container-name:".concat(this.name) }));
         this.container = runtime.createAgentContainer(this.profile);
     }
 
-    public AgentContainer getAgentContainer() {
+    public AgentContainer getHandle() {
         return this.container;
     }
 }

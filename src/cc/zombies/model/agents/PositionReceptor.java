@@ -35,8 +35,8 @@ public class PositionReceptor extends Agent {
                         callback.accept(args[0], Coordinate.from(Double.parseDouble(args[1]), Double.parseDouble(args[2])));
                     }
                     catch (Exception e) {
-                        System.out.println(String.format("Agent %s sent invalid format message [%].",
-                                                message.getSender().getName(), message.getContent()));
+                        System.out.printf("Agent %s sent invalid format message [%s].%n",
+                                            message.getSender().getName(), message.getContent());
                     }
                 }
                 else {

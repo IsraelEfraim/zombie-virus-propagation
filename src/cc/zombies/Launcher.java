@@ -22,7 +22,10 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 
 /* JADE imports */
@@ -46,17 +49,21 @@ public class Launcher extends Application {
     private Parent root;
     
     @FXML
-    private Canvas canvas;
-
-    private GraphicsContext gc;
+    private StackPane layers;
 
     /* Jade attributes */
     SimulationContainer container;
 
+    private int[] frames;
+    private int[] frameIndex;
+    private int frameCount;
+    private Image runnerDefault;
+    private Image[] runnersFrame;
+
     private void setupJade() throws Exception {
         MainContainer.start();
         this.container = new SimulationContainer("zombie-virus-propagation");
-        this.container.getAgentContainer().start();
+        this.container.getHandle().start();
     }
 
     private void setupUi(Stage primaryStage) throws Exception {
@@ -67,20 +74,30 @@ public class Launcher extends Application {
         primaryStage.setTitle("Zombie Virus Propagation");
         primaryStage.setScene(new Scene(root, 512, 512));
         primaryStage.show();
-
-        this.gc = canvas.getGraphicsContext2D();
     }
 
-    private void setupEvents(Stage primaryStage) throws Exception {
+    private void setupEvents(Stage primaryStage) {
         primaryStage.setOnCloseRequest((event) -> {
             try {
-                this.container.getAgentContainer().kill();
+                this.container.getHandle().kill();
                 MainContainer.end();
             }
             catch (Exception e) {
                 System.out.println("Launcher#setupEvents where couldn't end JADE properly");
             }
         });
+    }
+
+    private void setupFigures() {
+        this.runnerDefault = new Image("/cc/zombies/view/assets/img/figures/runner/runner-default-90r.png");
+        this.frames = new int[] {0, 0, 0, 0};
+        this.frameIndex = new int[] {0, 0, 0, 0};
+        this.frameCount = 7;
+        this.runnersFrame = new Image[4];
+
+        for (var i = 0; i < this.runnersFrame.length; ++i) {
+            this.runnersFrame[i] = new Image(String.format("/cc/zombies/view/assets/img/figures/runner/runner-mv-%d-90r.png", i));
+        }
     }
 
     // @TODO Remover
@@ -94,14 +111,18 @@ public class Launcher extends Application {
                 Coordinate.from(70, 80), Coordinate.from(400, 300)
         };
 
+        for (var idx = 0; idx < coordinates.length; ++idx) {
+            this.layers.getChildren().add(new Canvas(512, 512));
+        }
+
         /* Instantiate runners and controllers */
         for (int i = 0; i < coordinates.length; ++i) {
             try {
                 var runner = new Runner(
                         Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0),
-                        coordinates[i], 0.0005, 0.0, 512 * 0.2
+                        coordinates[i], 0.0002, 0.0, 512 * 0.2
                 );
-                var controller = container.getAgentContainer().acceptNewAgent("Runner" + i, runner);
+                var controller = container.getHandle().acceptNewAgent("Runner" + i, runner);
 
                 runners.add(new AgentPair(runner, controller));
             } catch (StaleProxyException e) {
@@ -115,14 +136,30 @@ public class Launcher extends Application {
             @Override
             public void run() {
                 Platform.runLater(() -> {
-                    gc.clearRect(0,0, canvas.getWidth(), canvas.getHeight());
-                    gc.setFill(Color.LIGHTPINK);
+                    for (var idx = 1; idx < layers.getChildren().size(); ++idx) {
+                        var gc = ((Canvas) layers.getChildren().get(idx)).getGraphicsContext2D();
 
-                    runners.forEach((pair) -> {
-                        var agent = pair.agent;
-                        gc.fillOval(agent.getCoordinate().getX(), agent.getCoordinate().getY(),
-                                15 ,15);
-                    });
+                        gc.clearRect(0,0, gc.getCanvas().getWidth(), gc.getCanvas().getWidth());
+                        gc.setFill(Color.LIGHTPINK);
+
+                        var agent = runners.get(idx - 1).agent;
+
+                        double x = agent.getCoordinate().getX(), y = agent.getCoordinate().getY();
+                        gc.save();
+                        var r = new Rotate(agent.getAngle(), x, y);
+                        gc.setTransform(r.getMxx(), r.getMyx(), r.getMxy(), r.getMyy(), r.getTx(), r.getTy());
+                        //gc.fillRect(x - 7.5, y - 7.5, 15, 15);
+
+                        frames[idx - 1]++;
+                        if (frames[idx - 1] % frameCount == 0) {
+                            frameIndex[idx - 1] = (4 + frameIndex[idx - 1] + 1) % 4;
+                        }
+
+                        gc.drawImage(runnersFrame[frameIndex[idx - 1]], x - 16, y - 16);
+                        gc.restore();
+
+                        //gc.fillOval(agent.getCoordinate().getX() - 15, agent.getCoordinate().getY() - 15, 15 ,15);
+                    }
                 });
             }
         }, 0, 30);
@@ -143,22 +180,25 @@ public class Launcher extends Application {
             try {
                 this.setupJade();
             }
-            catch (Exception ignore) {}
+            catch (Exception ignore) {
+                System.out.printf("Launcher#start where setupJade failed%n");
+            }
         });
         jadeJob.start();
 
         /* Setup User UI */
         this.setupUi(primaryStage);
         this.setupEvents(primaryStage);
+        this.setupFigures();
 
         /* Run tests */
         new Thread(() -> {
             try {
                 jadeJob.join();
-                this.doTests();
+                Platform.runLater(this::doTests);
             }
             catch (Exception e) {
-                System.out.println("Launcher#start where jadeJob thread failed");
+                System.out.printf("Launcher#start where tests failed%n{%n%s%n}", e.getMessage());
             }
         }).start();
     }

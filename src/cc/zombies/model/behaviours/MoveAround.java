@@ -14,9 +14,9 @@ import jade.core.behaviours.Behaviour;
 
 // @TODO Código operante, mover para uma classe com comportamento condicional
 public class MoveAround extends Behaviour {
-    private SimulatedAgent agent;
-    private List<Coordinate> path;
-    private double[] kernel;
+    private final SimulatedAgent agent;
+    private final List<Coordinate> path;
+    private final double[] kernel;
 
     public MoveAround(SimulatedAgent a) {
         super(a);
@@ -31,12 +31,20 @@ public class MoveAround extends Behaviour {
             this.generateRandomPath();
         }
 
-        var nextPosition = this.path.stream().findFirst().get();
-        this.agent.moveInDirectionOf(nextPosition);
+        var next = this.path.stream().findFirst();
+        if (next.isPresent()) {
+            this.agent.moveInDirectionOf(next.get());
 
-        if (this.agent.reached(nextPosition, this.agent.getSpeed() * 1.1)) {
-            this.path.remove(0);
+            if (this.agent.reached(next.get(), this.agent.getSpeed())) {
+                this.path.remove(0);
+            }
         }
+        else {
+            throw new RuntimeException(
+                    String.format("MoveAround#action where %s had no pathing", this.agent.getUuid())
+            );
+        }
+
     }
 
     @Override

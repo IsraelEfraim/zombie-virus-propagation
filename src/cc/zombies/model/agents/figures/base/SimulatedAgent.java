@@ -12,7 +12,7 @@ import java.util.UUID;
 import jade.core.Agent;
 
 public abstract class SimulatedAgent extends Agent {
-    private static String IDENTIFIER_SEPARATOR = "$";
+    private static final String IDENTIFIER_SEPARATOR = "$";
 
     private String identity;
     private String uuid;
@@ -26,7 +26,7 @@ public abstract class SimulatedAgent extends Agent {
         this.setIdentity(identity);
         this.setUuid(this.randomUUID());
         this.setBounds(bounds);
-        this.setCoordinate(coordinate);;
+        this.setCoordinate(coordinate);
         this.setSpeed(speed);
         this.setAngle(angle);
         this.setAwarenessRadius(awarenessRadius);
@@ -65,6 +65,16 @@ public abstract class SimulatedAgent extends Agent {
     }
 
     public void setCoordinate(Coordinate coordinate) {
+        if (this.coordinate != null) {
+            this.setAngle(
+                    /*
+                     * atan2(     delta(y)     ,      delta(x)     )
+                     * atan2(next.y - current.y, next.x - current.x)
+                     */
+                    Math.toDegrees(Math.atan2(coordinate.getY() - this.coordinate.getY(),
+                                                coordinate.getX() - this.coordinate.getX()))
+            );
+        }
         this.coordinate = coordinate;
     }
 
@@ -80,9 +90,7 @@ public abstract class SimulatedAgent extends Agent {
         return this.angle;
     }
 
-    public void setAngle(double angle) {
-        this.angle = angle;
-    }
+    public void setAngle(double angle) {  this.angle = angle; }
 
     public double getAwarenessRadius() {
         return awarenessRadius;
@@ -116,22 +124,55 @@ public abstract class SimulatedAgent extends Agent {
     public boolean moveInDirectionOf(Coordinate coordinate) {
         var position = new Coordinate(this.coordinate.getX(), this.coordinate.getY());
 
+        /*
+         * Corrected Movement Pattern Algorithm:
+         * If (coordinate.axis is bigger than position.axis) then
+         *   nextPosition.axis = position.axis + speed
+         *     if  (nextPosition.axis run past [target] coordinate.axis) then
+         *       nextPosition.axis = coordinate.axis
+         * else if (coordinate.axis is lesser than position.axis) then
+         *   nextPosition.axis = position.axis - speed
+         *     if  (nextPosition.axis run past [target] coordinate.axis) then
+         *       nextPosition.axis = coordinate.axis
+         *
+         * Setting nextPosition.axis to be coordinate.axis when nextPosition.axis
+         * would have run past coordinate.axis is necessary so that the agent
+         * doesn't keep going back and forth on its discrete walking grid, while
+         * the area itself is continuous.
+         */
+
         /* Move in X axis */
         if (coordinate.getX() > position.getX()) {
-            position.setX(position.getX() + this.speed);
+            var next = position.getX() + this.speed;
+            if (next > coordinate.getX()) {
+                next = coordinate.getX();
+            }
+            position.setX(next);
         } else if (coordinate.getX() < position.getX()) {
-            position.setX(position.getX() - this.speed);
+            var next = position.getX() - this.speed;
+            if (next < coordinate.getX()) {
+                next = coordinate.getX();
+            }
+            position.setX(next);
         }
 
         /* Move in Y axis */
         if (coordinate.getY() > position.getY()) {
-            position.setY(position.getY() + this.speed);
+            var next = position.getY() + this.speed;
+            if (next > coordinate.getY()) {
+                next = coordinate.getY();
+            }
+            position.setY(next);
         } else if (coordinate.getY() < position.getY()) {
-            position.setY(position.getY() - this.speed);
+            var next = position.getY() - this.speed;
+            if (next < coordinate.getY()) {
+                next = coordinate.getY();
+            }
+            position.setY(next);
         }
 
         if (this.canMoveTo(coordinate)) {
-            this.coordinate = position;
+            this.setCoordinate(position);
             return true;
         } else {
             return false;
