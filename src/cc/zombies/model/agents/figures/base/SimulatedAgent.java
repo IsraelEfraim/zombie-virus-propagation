@@ -3,16 +3,20 @@ package cc.zombies.model.agents.figures.base;
 /* CC imports */
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.Polygon;
+import cc.zombies.model.geom.TimedCoordinate;
 import cc.zombies.model.geom.internal.GeometryCalculator;
 
 /* Java imports */
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /* JADE imports */
 import jade.core.Agent;
 
 public abstract class SimulatedAgent extends Agent {
     private static final String IDENTIFIER_SEPARATOR = "$";
+    private static final List<String> registered = new ArrayList<>();
 
     private String identity;
     private String uuid;
@@ -21,8 +25,13 @@ public abstract class SimulatedAgent extends Agent {
     private double speed;
     private double angle;
     private double awarenessRadius;
+    private double actionRadius;
+    private final Function<SimulatedAgent, Boolean> invalidated;
+    private final Map<String, TimedCoordinate> sensed;
+    private Map<String, TimedCoordinate> lastSensed;
 
-    public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle, double awarenessRadius) {
+    public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
+                            double awarenessRadius, double actionRadius, Function<SimulatedAgent, Boolean> invalidated) {
         this.setIdentity(identity);
         this.setUuid(this.randomUUID());
         this.setBounds(bounds);
@@ -30,6 +39,10 @@ public abstract class SimulatedAgent extends Agent {
         this.setSpeed(speed);
         this.setAngle(angle);
         this.setAwarenessRadius(awarenessRadius);
+        this.setActionRadius(actionRadius);
+        this.invalidated = invalidated;
+        this.sensed = new HashMap<>();
+        this.lastSensed = new HashMap<>();
     }
 
     private String getIdentity() {
@@ -98,6 +111,30 @@ public abstract class SimulatedAgent extends Agent {
 
     public void setAwarenessRadius(double awarenessRadius) {
         this.awarenessRadius = awarenessRadius;
+    }
+
+    public double getActionRadius() {
+        return actionRadius;
+    }
+
+    public void setActionRadius(double actionRadius) {
+        this.actionRadius = actionRadius;
+    }
+
+    public Function<SimulatedAgent, Boolean> getInvalidated() {
+        return invalidated;
+    }
+
+    public Map<String, TimedCoordinate> getSensed() {
+        return sensed;
+    }
+
+    public Map<String, TimedCoordinate> getLastSensed() {
+        return lastSensed;
+    }
+
+    public void setLastSensed(Map<String, TimedCoordinate> lastSensed) {
+        this.lastSensed = lastSensed;
     }
 
     public String getType() {
@@ -192,5 +229,22 @@ public abstract class SimulatedAgent extends Agent {
         else {
             throw new RuntimeException("SimulatedAgent#getTypeByUuid with unformatted string");
         }
+    }
+
+    public static Function<SimulatedAgent, Boolean> invalidateByCount(Double limit) {
+        var n = new AtomicReference<>(0.0);
+
+        return (agent) -> {
+            var result = n.updateAndGet(v -> v + agent.getSpeed());
+            if (result >= limit) {
+                n.set(0.0);
+                return true;
+            }
+            return false;
+        };
+    }
+
+    private void register(String identity) {
+        SimulatedAgent.registered.add(identity);
     }
 }

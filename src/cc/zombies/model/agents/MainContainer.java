@@ -14,7 +14,7 @@ public class MainContainer {
     private final AgentContainer container;
 
     private MainContainer() throws ControllerException {
-        var profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:false" }));
+        var profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:true" }));
         this.container = runtime.createMainContainer(profile);
         this.container.start();
     }
@@ -28,6 +28,10 @@ public class MainContainer {
             MainContainer.setInstance(new MainContainer());
         }
         return MainContainer.instance;
+    }
+
+    public AgentContainer getHandle() {
+        return this.container;
     }
 
     public static void start() throws ControllerException {

@@ -2,6 +2,7 @@ package cc.zombies.model.behaviours;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
+import cc.zombies.model.behaviours.base.SimulationBehaviour;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.random.RandomHelper;
 
@@ -13,14 +14,12 @@ import java.util.List;
 import jade.core.behaviours.Behaviour;
 
 // @TODO Código operante, mover para uma classe com comportamento condicional
-public class MoveAround extends Behaviour {
-    private final SimulatedAgent agent;
+public class MoveAround extends SimulationBehaviour {
     private final List<Coordinate> path;
     private final double[] kernel;
 
     public MoveAround(SimulatedAgent a) {
         super(a);
-        this.agent = (SimulatedAgent) myAgent;
         this.path = new LinkedList<>();
         this.kernel = new double[] { 0.319466, 0.361069, 0.319466 };
     }

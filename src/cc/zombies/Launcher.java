@@ -3,6 +3,7 @@ package cc.zombies;
 /* CC imports */
 import cc.zombies.model.agents.MainContainer;
 import cc.zombies.model.agents.SimulationContainer;
+import cc.zombies.model.agents.figures.Infected;
 import cc.zombies.model.agents.figures.Runner;
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
 import cc.zombies.model.geom.Coordinate;
@@ -21,9 +22,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
@@ -60,9 +62,15 @@ public class Launcher extends Application {
     private Image runnerDefault;
     private Image[] runnersFrame;
 
+    private MediaPlayer player;
+
     private void setupJade() throws Exception {
         MainContainer.start();
-        this.container = new SimulationContainer("zombie-virus-propagation");
+        this.container = new SimulationContainer("quarantine");
+
+        var acceptedHandle = MainContainer.getInstance().getHandle().acceptNewAgent(
+                                        String.format("%s-ds", this.container.getHandle().getContainerName()), this.container);
+        acceptedHandle.start();
         this.container.getHandle().start();
     }
 
@@ -70,6 +78,11 @@ public class Launcher extends Application {
         var loader = new FXMLLoader(getClass().getResource("view/ApplicationScene.fxml"));
         loader.setController(this);
         this.root = loader.load();
+
+        var theme = new Media(getClass().getResource("/cc/zombies/view/assets/audio/theme.mp3").toString());
+        player = new MediaPlayer(theme);
+        player.setVolume(0.5);
+        player.play();
 
         primaryStage.setTitle("Zombie Virus Propagation");
         primaryStage.setScene(new Scene(root, 512, 512));
@@ -107,8 +120,8 @@ public class Launcher extends Application {
 
         /* Setup runner spawn point: one coordinate for each unique runner */
         var coordinates = new Coordinate[] {
-                Coordinate.from(256, 256), Coordinate.from(100, 100),
-                Coordinate.from(70, 80), Coordinate.from(400, 300)
+                Coordinate.from(1, 1), Coordinate.from(510, 1),
+                Coordinate.from(510, 510), Coordinate.from(1, 510)
         };
 
         for (var idx = 0; idx < coordinates.length; ++idx) {
@@ -119,16 +132,32 @@ public class Launcher extends Application {
         for (int i = 0; i < coordinates.length; ++i) {
             try {
                 var runner = new Runner(
-                        Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0),
-                        coordinates[i], 0.0002, 0.0, 512 * 0.2
+                        Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0), coordinates[i], 0.0002,
+                        0.0, 512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0)
                 );
-                var controller = container.getHandle().acceptNewAgent("Runner" + i, runner);
+                var controller = container.getHandle().acceptNewAgent(runner.getUuid(), runner);
 
                 runners.add(new AgentPair(runner, controller));
+
+                this.container.registerAgent(runner);
             } catch (StaleProxyException e) {
                 System.out.println("Exception while trying to accept new agent");
             }
         }
+
+        SimulatedAgent infected = null;
+        AgentController itsController = null;
+        try {
+            infected = new Infected(
+                    Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0), new Coordinate(256, 256), 0.0004,
+                    0.0, 512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0)
+            );
+            itsController = container.getHandle().acceptNewAgent(infected.getUuid(), infected);
+        }
+        catch (Exception e) {
+            System.out.println("Exception while trying to launch fixed infected");
+        }
+
 
         /* Start UI update background thread */
         Timer timer = new Timer();
@@ -171,6 +200,8 @@ public class Launcher extends Application {
             }
             catch (Exception ignore) {}
         });
+
+        try { itsController.start(); container.registerAgent(infected); } catch (Exception e) { e.printStackTrace(); };
     }
 
     @Override
