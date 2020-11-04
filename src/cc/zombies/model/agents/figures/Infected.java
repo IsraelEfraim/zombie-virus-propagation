@@ -2,6 +2,8 @@ package cc.zombies.model.agents.figures;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
+import cc.zombies.model.behaviours.MoveAround;
+import cc.zombies.model.behaviours.Sense;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.Polygon;
 
@@ -15,8 +17,7 @@ public class Infected extends SimulatedAgent {
     }
 
     protected void setup() {
-
+        this.addBehaviour(new Sense(this, this.getInvalidated()));
+        this.addBehaviour(new MoveAround(this));
     }
-
-
 }

@@ -1,7 +1,6 @@
 package cc.zombies.model.agents;
 
 /* CC imports */
-
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
 import cc.zombies.model.geom.internal.GeometryCalculator;
 import cc.zombies.model.geom.Coordinate;
@@ -14,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 
 /* JADE imports */
-
 import jade.core.Agent;
 import jade.core.Runtime;
 import jade.core.ProfileImpl;
@@ -22,21 +20,44 @@ import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.util.ExtendedProperties;
 import jade.wrapper.AgentContainer;
+import jade.wrapper.AgentController;
 
-public class SimulationContainer extends Agent {
+public class SimulationManager extends Agent {
     private static final Runtime runtime = Runtime.instance();
 
     private final String name;
     private final AgentContainer container;
+    private final AgentController controller;
     private final ProfileImpl profile;
+    private final List<AgentReference<SimulatedAgent>> figures;
 
-    private final List<SimulatedAgent> figures;
-
-    public SimulationContainer(String name) {
+    public SimulationManager(String name) throws Exception {
         this.name = name;
         this.profile = new ProfileImpl(new ExtendedProperties(new String[]{ "container-name:".concat(this.name) }));
         this.container = runtime.createAgentContainer(this.profile);
         this.figures = new ArrayList<>();
+        this.controller = MainContainer.getInstance().getHandle().acceptNewAgent(
+                String.format("%s-ds", this.container.getContainerName()), this);
+    }
+
+    public AgentContainer getContainer() {
+        return this.container;
+    }
+
+    public AgentController getController() { return this.controller; };
+
+    public void registerAgent(SimulatedAgent agent) throws Exception {
+        this.figures.add(new AgentReference<>(agent, this.container.acceptNewAgent(agent.getUuid(), agent)));
+    }
+
+    public void startAll() throws Exception {
+        for (var ref : this.figures) {
+            ref.getController().start();
+        }
+    }
+
+    public List<AgentReference<SimulatedAgent>> getFigures() {
+        return this.figures;
     }
 
     @Override
@@ -64,9 +85,9 @@ public class SimulationContainer extends Agent {
                             var map = new HashMap<String, TimedCoordinate>();
 
                             for (var figure : figures) {
-                                if (GeometryCalculator.isPointInRadius(figure.getCoordinate(), senderPosition, radius)
-                                        && !figure.getLocalName().equals(sender.getLocalName())) {
-                                    map.put(figure.getUuid(), new TimedCoordinate(figure.getCoordinate()));
+                                if (GeometryCalculator.isPointInRadius(figure.getAgent().getCoordinate(), senderPosition, radius)
+                                        && !figure.getAgent().getLocalName().equals(sender.getLocalName())) {
+                                    map.put(figure.getAgent().getUuid(), new TimedCoordinate(figure.getAgent().getCoordinate()));
                                 }
                             }
 
@@ -99,13 +120,5 @@ public class SimulationContainer extends Agent {
                 }
             }
         });
-    }
-
-    public AgentContainer getHandle() {
-        return this.container;
-    }
-
-    public void registerAgent(SimulatedAgent agent) {
-        this.figures.add(agent);
     }
 }

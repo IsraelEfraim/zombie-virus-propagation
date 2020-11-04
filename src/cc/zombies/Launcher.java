@@ -1,18 +1,23 @@
 package cc.zombies;
 
 /* CC imports */
+import cc.zombies.control.FigureFrameController;
+import cc.zombies.control.FigureFrameDispatcher;
 import cc.zombies.model.agents.MainContainer;
-import cc.zombies.model.agents.SimulationContainer;
+import cc.zombies.model.agents.SimulationManager;
 import cc.zombies.model.agents.figures.Infected;
 import cc.zombies.model.agents.figures.Runner;
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.Polygon;
+import cc.zombies.model.random.RandomHelper;
 
 /* Java imports */
-import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /* JavaFX imports */
 import javafx.application.Application;
@@ -29,49 +34,28 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
-
-/* JADE imports */
-import jade.wrapper.AgentController;
-import jade.wrapper.StaleProxyException;
+import javafx.util.Duration;
 
 public class Launcher extends Application {
-    // @TODO Melhorar elegância da solução
-    private static class AgentPair {
-        public SimulatedAgent agent;
-        public AgentController controller;
-
-        public AgentPair(SimulatedAgent agent, AgentController controller) {
-            this.agent = agent;
-            this.controller = controller;
-        }
-    }
-
     /* JavaFX attributes */
 
     private Parent root;
-    
+    private MediaPlayer player;
+
     @FXML
     private StackPane layers;
 
     /* Jade attributes */
-    SimulationContainer container;
 
-    private int[] frames;
-    private int[] frameIndex;
-    private int frameCount;
-    private Image runnerDefault;
-    private Image[] runnersFrame;
+    SimulationManager manager;
 
-    private MediaPlayer player;
+    private FigureFrameDispatcher frameDispatcher;
 
     private void setupJade() throws Exception {
         MainContainer.start();
-        this.container = new SimulationContainer("quarantine");
-
-        var acceptedHandle = MainContainer.getInstance().getHandle().acceptNewAgent(
-                                        String.format("%s-ds", this.container.getHandle().getContainerName()), this.container);
-        acceptedHandle.start();
-        this.container.getHandle().start();
+        this.manager = new SimulationManager("quarantine");
+        this.manager.getController().start();
+        this.manager.getContainer().start();
     }
 
     private void setupUi(Stage primaryStage) throws Exception {
@@ -81,6 +65,7 @@ public class Launcher extends Application {
 
         var theme = new Media(getClass().getResource("/cc/zombies/view/assets/audio/theme.mp3").toString());
         player = new MediaPlayer(theme);
+        player.setOnEndOfMedia(() -> player.seek(Duration.ZERO));
         player.setVolume(0.5);
         player.play();
 
@@ -92,7 +77,7 @@ public class Launcher extends Application {
     private void setupEvents(Stage primaryStage) {
         primaryStage.setOnCloseRequest((event) -> {
             try {
-                this.container.getHandle().kill();
+                this.manager.getContainer().kill();
                 MainContainer.end();
             }
             catch (Exception e) {
@@ -102,62 +87,62 @@ public class Launcher extends Application {
     }
 
     private void setupFigures() {
-        this.runnerDefault = new Image("/cc/zombies/view/assets/img/figures/runner/runner-default-90r.png");
-        this.frames = new int[] {0, 0, 0, 0};
-        this.frameIndex = new int[] {0, 0, 0, 0};
-        this.frameCount = 7;
-        this.runnersFrame = new Image[4];
+        this.frameDispatcher = new FigureFrameDispatcher(SimulatedAgent::getTypeByUuid);
 
-        for (var i = 0; i < this.runnersFrame.length; ++i) {
-            this.runnersFrame[i] = new Image(String.format("/cc/zombies/view/assets/img/figures/runner/runner-mv-%d-90r.png", i));
-        }
+        this.frameDispatcher.addDispatcher(
+                "Runner",
+                new FigureFrameController(7, IntStream.range(0, 4).mapToObj(
+                    (idx) -> new Image(String.format("/cc/zombies/view/assets/img/figures/runner/mv-%d-90r.png", idx))
+                ).collect(Collectors.toList()))
+        );
+
+        this.frameDispatcher.addDispatcher(
+                "Infected",
+                new FigureFrameController(7, IntStream.range(0, 4).mapToObj(
+                    (idx) -> new Image(String.format("/cc/zombies/view/assets/img/figures/infected/mv-%d-90r.png", idx))
+                ).collect(Collectors.toList()))
+        );
     }
 
     // @TODO Remover
     private void doTests() {
-        /* Setup runners array */
-        var runners = new ArrayList<AgentPair>();
+        var bounds = Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0);
 
-        /* Setup runner spawn point: one coordinate for each unique runner */
-        var coordinates = new Coordinate[] {
-                Coordinate.from(1, 1), Coordinate.from(510, 1),
-                Coordinate.from(510, 510), Coordinate.from(1, 510)
-        };
+        var numRunners = 5;
+        var numInfected = 2;
 
-        for (var idx = 0; idx < coordinates.length; ++idx) {
+        var total  = numRunners + numInfected;
+
+        Supplier<Coordinate> generateRandomPosition =
+                () -> new Coordinate(RandomHelper.doubleWithin(1, 511), RandomHelper.doubleWithin(1, 511));
+
+        for (var idx = 0; idx < total; ++idx) {
             this.layers.getChildren().add(new Canvas(512, 512));
         }
 
         /* Instantiate runners and controllers */
-        for (int i = 0; i < coordinates.length; ++i) {
+        for (int i = 0; i < numRunners; ++i) {
             try {
-                var runner = new Runner(
-                        Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0), coordinates[i], 0.0002,
-                        0.0, 512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0)
-                );
-                var controller = container.getHandle().acceptNewAgent(runner.getUuid(), runner);
+                var runner = new Runner(bounds, generateRandomPosition.get(), 0.0002, 0.0,
+                        512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0));
 
-                runners.add(new AgentPair(runner, controller));
-
-                this.container.registerAgent(runner);
-            } catch (StaleProxyException e) {
-                System.out.println("Exception while trying to accept new agent");
+                this.manager.registerAgent(runner);
+            } catch (Exception e) {
+                System.out.printf("Launcher#doTests while trying to instantiate runners%n");
             }
         }
 
-        SimulatedAgent infected = null;
-        AgentController itsController = null;
-        try {
-            infected = new Infected(
-                    Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0), new Coordinate(256, 256), 0.0004,
-                    0.0, 512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0)
-            );
-            itsController = container.getHandle().acceptNewAgent(infected.getUuid(), infected);
-        }
-        catch (Exception e) {
-            System.out.println("Exception while trying to launch fixed infected");
-        }
+        /* Instantiate infected and controllers */
+        for (int i = 0; i < numInfected; ++i) {
+            try {
+                var infected = new Infected(bounds, generateRandomPosition.get(), 0.000205, 0.0,
+                        512 * 0.2, 0.0, SimulatedAgent.invalidateByCount(1.0));
 
+                this.manager.registerAgent(infected);
+            } catch (Exception e) {
+                System.out.printf("Launcher#doTests while trying to instantiate infected%n");
+            }
+        }
 
         /* Start UI update background thread */
         Timer timer = new Timer();
@@ -171,37 +156,28 @@ public class Launcher extends Application {
                         gc.clearRect(0,0, gc.getCanvas().getWidth(), gc.getCanvas().getWidth());
                         gc.setFill(Color.LIGHTPINK);
 
-                        var agent = runners.get(idx - 1).agent;
-
+                        var agent = manager.getFigures().get(idx - 1).getAgent();
                         double x = agent.getCoordinate().getX(), y = agent.getCoordinate().getY();
+
                         gc.save();
+
                         var r = new Rotate(agent.getAngle(), x, y);
                         gc.setTransform(r.getMxx(), r.getMyx(), r.getMxy(), r.getMyy(), r.getTx(), r.getTy());
-                        //gc.fillRect(x - 7.5, y - 7.5, 15, 15);
+                        gc.drawImage(frameDispatcher.getFrameFor(agent.getUuid()), x - 16, y - 16);
 
-                        frames[idx - 1]++;
-                        if (frames[idx - 1] % frameCount == 0) {
-                            frameIndex[idx - 1] = (4 + frameIndex[idx - 1] + 1) % 4;
-                        }
-
-                        gc.drawImage(runnersFrame[frameIndex[idx - 1]], x - 16, y - 16);
                         gc.restore();
-
-                        //gc.fillOval(agent.getCoordinate().getX() - 15, agent.getCoordinate().getY() - 15, 15 ,15);
                     }
                 });
             }
         }, 0, 30);
 
         /* Dispatch controllers start */
-        runners.forEach((pair) -> {
-            try {
-                pair.controller.start();
-            }
-            catch (Exception ignore) {}
-        });
-
-        try { itsController.start(); container.registerAgent(infected); } catch (Exception e) { e.printStackTrace(); };
+        try {
+            this.manager.startAll();
+        }
+        catch (Exception e) {
+            System.out.printf("Launcher#doTests while trying to dispatch controller start%n");
+        }
     }
 
     @Override
@@ -229,7 +205,7 @@ public class Launcher extends Application {
                 Platform.runLater(this::doTests);
             }
             catch (Exception e) {
-                System.out.printf("Launcher#start where tests failed%n{%n%s%n}", e.getMessage());
+                System.out.printf("Launcher#start where tests failed {%s}%n", e.getMessage());
             }
         }).start();
     }

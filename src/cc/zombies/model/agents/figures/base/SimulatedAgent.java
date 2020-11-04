@@ -43,6 +43,7 @@ public abstract class SimulatedAgent extends Agent {
         this.invalidated = invalidated;
         this.sensed = new HashMap<>();
         this.lastSensed = new HashMap<>();
+        SimulatedAgent.register(identity);
     }
 
     private String getIdentity() {
@@ -244,7 +245,7 @@ public abstract class SimulatedAgent extends Agent {
         };
     }
 
-    private void register(String identity) {
+    private static void register(String identity) {
         SimulatedAgent.registered.add(identity);
     }
 }

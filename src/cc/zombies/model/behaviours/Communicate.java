@@ -50,7 +50,6 @@ public class Communicate extends PeriodicBehaviour {
                         else {
                             sensed.put(args[0], tc);
                         }
-
                         // System.out.printf("{%s} now knows about %s%n", this.agent.getUuid(), args[0], tc);
                     }
                 }
@@ -87,10 +86,9 @@ public class Communicate extends PeriodicBehaviour {
                     warning.setLanguage("English");
                     warning.setOntology("threat-warning");
                     warning.setContent(knownThreats);
-
                     this.myAgent.send(warning);
 
-                    System.out.printf("{%s} Warned {%s} about threat%n", this.agent.getUuid(), ally.getKey());
+                    // System.out.printf("{%s} Warned {%s} about threat%n", this.agent.getUuid(), ally.getKey());
                 }
             }
         }
