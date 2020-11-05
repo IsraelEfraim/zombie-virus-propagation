@@ -10,9 +10,6 @@ import cc.zombies.model.random.RandomHelper;
 import java.util.LinkedList;
 import java.util.List;
 
-/* JADE imports */
-import jade.core.behaviours.Behaviour;
-
 // @TODO Código operante, mover para uma classe com comportamento condicional
 public class MoveAround extends SimulationBehaviour {
     private final List<Coordinate> path;

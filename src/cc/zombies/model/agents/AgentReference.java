@@ -4,16 +4,16 @@ package cc.zombies.model.agents;
 import jade.core.Agent;
 import jade.wrapper.AgentController;
 
-public class AgentReference <A extends Agent> {
-    private final A agent;
+public class AgentReference <AgentType extends Agent> {
+    private final AgentType agent;
     private final AgentController controller;
 
-    public AgentReference(A agent, AgentController controller) {
+    public AgentReference(AgentType agent, AgentController controller) {
         this.agent = agent;
         this.controller = controller;
     }
 
-    public A getAgent() {
+    public AgentType getAgent() {
         return agent;
     }
 

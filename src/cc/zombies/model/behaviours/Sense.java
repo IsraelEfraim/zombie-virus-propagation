@@ -2,43 +2,23 @@ package cc.zombies.model.behaviours;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
+import cc.zombies.model.agents.util.AgentPredicate;
 import cc.zombies.model.behaviours.base.PeriodicBehaviour;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.TimedCoordinate;
-
-/* Java imports */
-import java.util.function.Function;
 
 /* JADE imports */
 import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 
-/* @TODO Implementar Communicate
- *
- * [ uuid -> { position, epoch } ]
- * maybe put this in an extended class of a SimulatedAgent
- *
- * queryNearby(String type) -> Map<String, Coordinate>
- * into
- * queryNearbyThreats() -> Map<String, Coordinate>
- * queryNearbyAllies() -> Map<String, Coordinate>
- *
- * send Threats collection to each Ally
- *
- * on receive
- * Replace each uuid with new position if receiving epoch > epoch
- * Add non-existing uuid
- *
- * epoch = System.currentTimeMillis;
- */
 public class Sense extends PeriodicBehaviour {
-    public Sense(SimulatedAgent agent, Function<SimulatedAgent, Boolean> invalidated) {
-        super(agent, invalidated);
+    public Sense(SimulatedAgent agent, AgentPredicate cooldown) {
+        super(agent, cooldown);
     }
 
     @Override
     public void action() {
-        var message = this.myAgent.receive();
+        var message = this.agent.receive();
 
         if (message != null) {
             var content = message.getContent();
@@ -52,12 +32,12 @@ public class Sense extends PeriodicBehaviour {
                 var lines = content.split(",");
                 for (var line : lines) {
                     if (!line.isBlank()) {
-                        /* Message pattern is "uuid x y epoch"*/
+                        /* Message pattern is "uuid x y status epoch"*/
                         var args = line.split(" ");
 
-                        var epoch = Long.parseLong(args[3]);
+                        var epoch = Long.parseLong(args[4]);
                         var tc = new TimedCoordinate(new Coordinate(Double.parseDouble(args[1]),
-                                                        Double.parseDouble(args[2])), epoch);
+                                                        Double.parseDouble(args[2])), args[3], epoch);
 
                         lastSensed.put(args[0], tc);
 
@@ -70,28 +50,23 @@ public class Sense extends PeriodicBehaviour {
                         }
                         else {
                             sensed.put(args[0], tc);
+                            System.out.printf("[%s] knows about {%s}%n", this.agent.getUuid(), args[0]);
                         }
-
-                        //System.out.printf("{%s} read %s -> %s%n", this.agent.getUuid(), args[0], tc);
                     }
                 }
-
-                // System.out.printf("{%s} senses %d nearby agents%n", this.agent.getUuid(), this.agent.getLastSensed().size());
             }
         }
         else {
-            if (this.invalidated.apply(this.agent)) {
+            if (this.cooldown.apply(this.agent)) {
                 try {
                     var request = new ACLMessage(ACLMessage.REQUEST);
                     request.addReceiver(new AID(
-                            String.format("%s-ds", this.myAgent.getContainerController().getContainerName()), AID.ISLOCALNAME));
+                            String.format("%s-ds", this.agent.getContainerController().getContainerName()), AID.ISLOCALNAME));
                     request.setLanguage("English");
                     request.setOntology("query-nearby");
                     request.setContent(String.format("%.8f %.8f %.8f", this.agent.getCoordinate().getX(),
                             this.agent.getCoordinate().getY(), this.agent.getAwarenessRadius()));
-                    this.myAgent.send(request);
-
-                    //System.out.printf("Sent request to %s%n", String.format("%s-ds", this.myAgent.getContainerController().getContainerName()));
+                    this.agent.send(request);
                 }
                 catch (Exception e) {
                     System.out.printf("Sense#action where couldn't sent message to container ds%n");
@@ -101,7 +76,5 @@ public class Sense extends PeriodicBehaviour {
     }
 
     @Override
-    public boolean done() {
-        return false;
-    }
+    public boolean done() { return false; }
 }

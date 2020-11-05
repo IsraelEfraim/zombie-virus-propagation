@@ -9,8 +9,8 @@ import jade.core.behaviours.Behaviour;
 public abstract class SimulationBehaviour extends Behaviour {
     protected final SimulatedAgent agent;
 
-    public SimulationBehaviour(SimulatedAgent agent) {
-        super(agent);
-        this.agent = agent;
-    }
+    public SimulationBehaviour(SimulatedAgent agent) { this.agent = agent; }
+
+    public abstract void action();
+    public abstract boolean done();
 }

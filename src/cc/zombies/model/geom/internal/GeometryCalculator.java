@@ -30,4 +30,9 @@ public abstract class GeometryCalculator {
 
         return c.contains(point.getX(), point.getY());
     }
+
+    public static double distance(Coordinate p1, Coordinate p2) {
+        return Math.sqrt(Math.pow(p1.getX() - p2.getX(), 2)
+                            + Math.pow(p1.getY() - p2.getY(), 2));
+    }
 }

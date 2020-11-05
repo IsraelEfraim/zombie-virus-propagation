@@ -1,6 +1,7 @@
 package cc.zombies.model.agents.figures.base;
 
 /* CC imports */
+import cc.zombies.model.agents.util.AgentPredicate;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.Polygon;
 import cc.zombies.model.geom.TimedCoordinate;
@@ -15,35 +16,87 @@ import java.util.function.Function;
 import jade.core.Agent;
 
 public abstract class SimulatedAgent extends Agent {
+    public abstract class Status {
+        public static final String LIVE = "live";
+        public static final String DEAD = "dead";
+        public static final String MISSING = "missing";
+    }
+
     private static final String IDENTIFIER_SEPARATOR = "$";
-    private static final List<String> registered = new ArrayList<>();
+
+    public static double DEFAULT_SENSE_COOLDOWN = 1.0;
+    public static double DEFAULT_COMMS_COOLDOWN = 1.0;
+    public static double DEFAULT_SKILL_COOLDOWN = 3.0;
 
     private String identity;
     private String uuid;
+    private String status;
     private Polygon bounds;
     private Coordinate coordinate;
     private double speed;
     private double angle;
     private double awarenessRadius;
     private double actionRadius;
-    private final Function<SimulatedAgent, Boolean> invalidated;
+    private final AgentPredicate senseCooldown;
+    private final AgentPredicate commsCooldown;
+    private final AgentPredicate skillCooldown;
     private final Map<String, TimedCoordinate> sensed;
     private Map<String, TimedCoordinate> lastSensed;
 
-    public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
-                            double awarenessRadius, double actionRadius, Function<SimulatedAgent, Boolean> invalidated) {
+    public SimulatedAgent(String identity, String status, Polygon bounds, Coordinate coordinate, double speed,
+                            double angle, double awarenessRadius, double actionRadius, AgentPredicate senseCooldown,
+                            AgentPredicate commsCooldown, AgentPredicate skillCooldown) {
         this.setIdentity(identity);
         this.setUuid(this.randomUUID());
+        this.setStatus(status);
         this.setBounds(bounds);
         this.setCoordinate(coordinate);
         this.setSpeed(speed);
         this.setAngle(angle);
         this.setAwarenessRadius(awarenessRadius);
         this.setActionRadius(actionRadius);
-        this.invalidated = invalidated;
+        this.senseCooldown = senseCooldown;
+        this.commsCooldown = commsCooldown;
+        this.skillCooldown = skillCooldown;
         this.sensed = new HashMap<>();
         this.lastSensed = new HashMap<>();
-        SimulatedAgent.register(identity);
+    }
+
+    public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
+                            double awarenessRadius, double actionRadius, AgentPredicate senseCooldown,
+                            AgentPredicate commsCooldown, AgentPredicate skillCooldown) {
+        this.setIdentity(identity);
+        this.setUuid(this.randomUUID());
+        this.setStatus(Status.LIVE);
+        this.setBounds(bounds);
+        this.setCoordinate(coordinate);
+        this.setSpeed(speed);
+        this.setAngle(angle);
+        this.setAwarenessRadius(awarenessRadius);
+        this.setActionRadius(actionRadius);
+        this.senseCooldown = senseCooldown;
+        this.commsCooldown = commsCooldown;
+        this.skillCooldown = skillCooldown;
+        this.sensed = new HashMap<>();
+        this.lastSensed = new HashMap<>();
+    }
+
+    public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
+                            double awarenessRadius, double actionRadius) {
+        this.setIdentity(identity);
+        this.setUuid(this.randomUUID());
+        this.setStatus(Status.LIVE);
+        this.setBounds(bounds);
+        this.setCoordinate(coordinate);
+        this.setSpeed(speed);
+        this.setAngle(angle);
+        this.setAwarenessRadius(awarenessRadius);
+        this.setActionRadius(actionRadius);
+        this.senseCooldown = SimulatedAgent.countCooldown(SimulatedAgent.DEFAULT_SENSE_COOLDOWN);
+        this.commsCooldown = SimulatedAgent.countCooldown(SimulatedAgent.DEFAULT_COMMS_COOLDOWN);
+        this.skillCooldown = SimulatedAgent.countCooldown(SimulatedAgent.DEFAULT_SKILL_COOLDOWN);
+        this.sensed = new HashMap<>();
+        this.lastSensed = new HashMap<>();
     }
 
     private String getIdentity() {
@@ -66,6 +119,14 @@ public abstract class SimulatedAgent extends Agent {
         this.uuid = uuid;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public Polygon getBounds() {
         return bounds;
     }
@@ -81,10 +142,7 @@ public abstract class SimulatedAgent extends Agent {
     public void setCoordinate(Coordinate coordinate) {
         if (this.coordinate != null) {
             this.setAngle(
-                    /*
-                     * atan2(     delta(y)     ,      delta(x)     )
-                     * atan2(next.y - current.y, next.x - current.x)
-                     */
+                    /* atan2(delta(y), delta(x)) */
                     Math.toDegrees(Math.atan2(coordinate.getY() - this.coordinate.getY(),
                                                 coordinate.getX() - this.coordinate.getX()))
             );
@@ -122,9 +180,13 @@ public abstract class SimulatedAgent extends Agent {
         this.actionRadius = actionRadius;
     }
 
-    public Function<SimulatedAgent, Boolean> getInvalidated() {
-        return invalidated;
+    public AgentPredicate getSenseCooldown() {
+        return senseCooldown;
     }
+
+    public AgentPredicate getCommsCooldown() { return commsCooldown; }
+
+    public AgentPredicate getSkillCooldown() { return skillCooldown; }
 
     public Map<String, TimedCoordinate> getSensed() {
         return sensed;
@@ -140,6 +202,10 @@ public abstract class SimulatedAgent extends Agent {
 
     public String getType() {
         return this.getIdentity();
+    }
+
+    public boolean isDead() {
+        return this.getStatus().equalsIgnoreCase(Status.DEAD);
     }
 
     // @TODO Checar se vamos manter essa função
@@ -232,7 +298,7 @@ public abstract class SimulatedAgent extends Agent {
         }
     }
 
-    public static Function<SimulatedAgent, Boolean> invalidateByCount(Double limit) {
+    public static AgentPredicate countCooldown(Double limit) {
         var n = new AtomicReference<>(0.0);
 
         return (agent) -> {
@@ -243,9 +309,5 @@ public abstract class SimulatedAgent extends Agent {
             }
             return false;
         };
-    }
-
-    private static void register(String identity) {
-        SimulatedAgent.registered.add(identity);
     }
 }
