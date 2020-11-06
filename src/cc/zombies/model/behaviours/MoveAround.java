@@ -10,7 +10,6 @@ import cc.zombies.model.random.RandomHelper;
 import java.util.LinkedList;
 import java.util.List;
 
-// @TODO Código operante, mover para uma classe com comportamento condicional
 public class MoveAround extends SimulationBehaviour {
     private final List<Coordinate> path;
     private final double[] kernel;
@@ -45,7 +44,7 @@ public class MoveAround extends SimulationBehaviour {
 
     @Override
     public boolean done() {
-        return false;
+        return this.agent.isDead();
     }
 
     protected void generateRandomPath() {

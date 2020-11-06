@@ -2,7 +2,7 @@ package cc.zombies.model.behaviours;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
-import cc.zombies.model.agents.util.AgentPredicate;
+import cc.zombies.model.agents.util.Cooldown;
 import cc.zombies.model.behaviours.base.PeriodicBehaviour;
 import cc.zombies.model.geom.internal.GeometryCalculator;
 
@@ -14,7 +14,7 @@ import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 
 public class Chase extends PeriodicBehaviour {
-    public Chase(SimulatedAgent agent, AgentPredicate cooldown) {
+    public Chase(SimulatedAgent agent, Cooldown cooldown) {
         super(agent, cooldown);
     }
 
@@ -43,7 +43,7 @@ public class Chase extends PeriodicBehaviour {
             var victim = scent.get(minIndex);
             if (GeometryCalculator.isPointInRadius(victim.getValue().getCoordinate(),
                     this.agent.getCoordinate(), this.agent.getActionRadius())
-                    && this.cooldown.apply(this.agent)) {
+                    && this.cooldown.check(this.agent)) {
                 /* Infect */
                 try {
                     var message = new ACLMessage(ACLMessage.INFORM);
@@ -53,6 +53,8 @@ public class Chase extends PeriodicBehaviour {
                     message.setOntology("infect-target");
                     message.setContent(victim.getKey());
                     this.agent.send(message);
+
+                    this.agent.getSkillCooldown().use();
                 }
                 catch (Exception e) {
                     System.out.printf("Chase#action where couldn't infect target%n");
@@ -66,5 +68,5 @@ public class Chase extends PeriodicBehaviour {
     }
 
     @Override
-    public boolean done() { return !this.agent.isDead(); }
+    public boolean done() { return this.agent.isDead(); }
 }

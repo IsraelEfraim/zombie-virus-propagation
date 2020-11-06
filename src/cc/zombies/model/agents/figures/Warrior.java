@@ -2,7 +2,7 @@ package cc.zombies.model.agents.figures;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
-import cc.zombies.model.agents.util.AgentPredicate;
+import cc.zombies.model.agents.util.Cooldown;
 import cc.zombies.model.behaviours.Communicate;
 import cc.zombies.model.behaviours.Hunt;
 import cc.zombies.model.behaviours.MoveAround;
@@ -22,19 +22,19 @@ public class Warrior extends SimulatedAgent {
         super("Warrior", bounds, coordinate, speed, angle, awarenessRadius, actionRadius);
     }
 
-    public Warrior(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
-                    double awarenessRadius, double actionRadius, AgentPredicate senseCooldown,
-                    AgentPredicate commsCooldown, AgentPredicate skillCooldown) {
-        super(identity, bounds, coordinate, speed, angle, awarenessRadius, actionRadius,
+    public Warrior(Polygon bounds, Coordinate coordinate, double speed, double angle,
+                   double awarenessRadius, double actionRadius, Cooldown senseCooldown,
+                   Cooldown commsCooldown, Cooldown skillCooldown) {
+        super("Warrior", bounds, coordinate, speed, angle, awarenessRadius, actionRadius,
                 senseCooldown, commsCooldown, skillCooldown);
     }
 
     protected void setup() {
         this.addBehaviour(new Sense(this, this.getSenseCooldown()));
-        this.addBehaviour(new Communicate(this, SimulatedAgent.countCooldown(1.0)));
+        this.addBehaviour(new Communicate(this, this.getCommsCooldown()));
 
         this.addBehaviour(new SelectiveBehaviour(this,
-                            new SimpleEntry<>(this::hasTarget, new Hunt(this)),
+                            new SimpleEntry<>(this::hasTarget, new Hunt(this, this.getSkillCooldown())),
                             new SimpleEntry<>(this::hasNoTarget, new MoveAround(this))));
     }
 

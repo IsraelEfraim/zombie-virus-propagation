@@ -123,8 +123,7 @@ public class SimulationManager extends Agent {
 
                             for (var figure : figures) {
                                 if (GeometryCalculator.isPointInRadius(figure.getAgent().getCoordinate(), senderPosition, radius)
-                                        && !figure.getAgent().getLocalName().equals(sender.getLocalName())
-                                        /*&& figure.getAgent().getStatus().equals(SimulatedAgent.Status.LIVE)*/) {
+                                        && !figure.getAgent().getLocalName().equals(sender.getLocalName())) {
                                     map.put(figure.getAgent().getUuid(),
                                             new TimedCoordinate(figure.getAgent().getCoordinate(), figure.getAgent().getStatus()));
                                 }
@@ -161,6 +160,8 @@ public class SimulationManager extends Agent {
                             var ref = target.get();
                             ref.getAgent().setStatus(SimulatedAgent.Status.DEAD);
 
+                            System.out.printf("[%s] infects {%s}%n", sender.getLocalName(), ref.getAgent().getUuid());
+
                             try {
                                 ref.getAgent().doSuspend();
                                 //ref.getController().kill();
@@ -174,6 +175,14 @@ public class SimulationManager extends Agent {
                                 System.out.printf("SimulationManager#action where couldn't spawn infected%n");
                             }
                         }
+
+                        var remaining = figures.stream().filter(
+                                (entry) -> !entry.getAgent().getType().equals("Infected")
+                                        && entry.getAgent().getStatus().equals(SimulatedAgent.Status.LIVE));
+
+                        if (remaining.count() == 0) {
+                            System.out.printf("All survivors erradicated%n");
+                        }
                     }
                     else if (message.getOntology().equalsIgnoreCase("slay-target")) {
                         var target = figures.stream().filter(
@@ -185,6 +194,8 @@ public class SimulationManager extends Agent {
                             var ref = target.get();
                             ref.getAgent().setStatus(SimulatedAgent.Status.DEAD);
 
+                            System.out.printf("[%s] slays {%s}%n", sender.getLocalName(), ref.getAgent().getUuid());
+
                             try {
                                 ref.getAgent().doSuspend();
                                 //ref.getController().kill();
@@ -192,6 +203,14 @@ public class SimulationManager extends Agent {
                             catch (Exception e) {
                                 System.out.printf("SimulationManager#action where couldn't slay target%n");
                             }
+                        }
+
+                        var remaining = figures.stream().filter(
+                                (entry) -> entry.getAgent().getType().equals("Infected")
+                                            && entry.getAgent().getStatus().equals(SimulatedAgent.Status.LIVE));
+
+                        if (remaining.count() == 0) {
+                            System.out.printf("All virals erradicated%n");
                         }
                     }
                 }

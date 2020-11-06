@@ -14,7 +14,7 @@ public class MainContainer {
     private final AgentContainer container;
 
     private MainContainer() throws ControllerException {
-        var profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:true" }));
+        var profile = new ProfileImpl(new ExtendedProperties(new String[]{ "gui:false" }));
         this.container = runtime.createMainContainer(profile);
         this.container.start();
     }

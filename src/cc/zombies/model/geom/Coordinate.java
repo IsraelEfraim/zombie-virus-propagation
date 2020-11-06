@@ -33,4 +33,8 @@ public class Coordinate {
     public String toString() {
         return String.format("Coordinate{x:%.5f,y:%.5f}", x, y);
     }
+
+    public boolean equals(Coordinate other) {
+        return this.getX() == other.getX() && this.getY() == other.getY();
+    }
 }

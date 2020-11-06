@@ -22,13 +22,17 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /* JavaFX imports */
+import com.jfoenix.controls.JFXButton;
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
 import javafx.scene.media.Media;
@@ -45,6 +49,15 @@ public class Launcher extends Application {
 
     @FXML
     private StackPane layers;
+
+    @FXML
+    private ProgressIndicator indStartup;
+
+    @FXML
+    private JFXButton btnStart;
+
+    @FXML
+    private Node cntPlaceholder;
 
     /* Jade attributes */
 
@@ -65,13 +78,35 @@ public class Launcher extends Application {
         loader.setController(this);
         this.root = loader.load();
 
+        primaryStage.getIcons().add(new Image(getClass().getResource("/cc/zombies/view/assets/img/scheme/icon.png").toString()));
+
         var theme = new Media(getClass().getResource("/cc/zombies/view/assets/audio/theme.mp3").toString());
         player = new MediaPlayer(theme);
         player.setOnEndOfMedia(() -> player.seek(Duration.ZERO));
         player.setVolume(0.5);
         player.play();
 
-        primaryStage.setTitle("Zombie Virus Propagation");
+        this.btnStart.setOnAction((e) -> Platform.runLater(() -> {
+            var fade = new FadeTransition(Duration.seconds(1.0), this.cntPlaceholder);
+            fade.setFromValue(1.0);
+            fade.setToValue(0.0);
+            fade.play();
+
+            this.startDrawing();
+
+            new Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(() -> {
+                        layers.getChildren().removeIf(
+                                (node) -> node.getId() != null && node.getId().equals("cntPlaceholder"));
+                        startSimulation();
+                    });
+                }
+            }, 1000);
+        }));
+
+        primaryStage.setTitle("Dying Agents");
         primaryStage.setScene(new Scene(root, 512, 512));
         primaryStage.getScene().setOnMouseClicked(
                 (e) -> {
@@ -117,7 +152,7 @@ public class Launcher extends Application {
         this.frameDispatcher.addDispatcher(
                 "Runner",
                 new FigureFrameController(7, IntStream.range(0, 4).mapToObj(
-                    (idx) -> new Image(String.format("/cc/zombies/view/assets/img/figures/runner/mv-alt-%d-90r.png", idx))
+                    (idx) -> new Image(String.format("/cc/zombies/view/assets/img/figures/runner/mv-ext-%d-90r.png", idx))
                 ).collect(Collectors.toList()))
         );
 
@@ -146,23 +181,48 @@ public class Launcher extends Application {
         gc.restore();
     }
 
+    private void startDrawing() {
+        /* Start UI update background thread */
+        var timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                Platform.runLater(() -> {
+                    synchronized (manager.getFigures()) {
+                        for (var figure : manager.getFigures()) {
+                            var agent = figure.getAgent();
+                            var gc = canvasController.getGraphics2DFor(agent.getUuid());
+                            gc.clearRect(0,0, gc.getCanvas().getWidth(), gc.getCanvas().getWidth());
+
+                            if (!agent.isDead()) {
+                                double x = agent.getCoordinate().getX(), y = agent.getCoordinate().getY();
+                                drawRotatedImage(gc, frameDispatcher.getFrameFor(agent.getUuid()), x, y, agent.getAngle());
+                            }
+                        }
+                    }
+                });
+            }
+        }, 0, 33);
+    }
+
     private void startSimulation() {
         var bounds = Polygon.from(0, 0, 512, 0, 512, 512, 0, 512, 0, 0);
 
-        var numRunner = 2;
-        var numInfected = 1;
-        var numWarrior = 1;
+        var numRunner = 4;
+        var numInfected = 3;
+        var numWarrior = 2;
 
         Supplier<Coordinate> generateRandomPosition =
                 () -> new Coordinate(RandomHelper.doubleWithin(1, 511), RandomHelper.doubleWithin(1, 511));
 
-        this.manager.setSpawnRunner(() -> new Runner(bounds, generateRandomPosition.get(), 0.00025, 0.0,
+        this.manager.setSpawnRunner(() -> new Runner(bounds, generateRandomPosition.get(), 0.0003, 0.0,
                 512 * 0.2, 0.0));
 
-        this.manager.setSpawnWarrior(() -> new Warrior(bounds, generateRandomPosition.get(), 0.0002, 0.0,
-                512 * 0.2, 512 * 0.055));
+        this.manager.setSpawnWarrior(() -> new Warrior(bounds, generateRandomPosition.get(), 0.0003, 0.0,
+                512 * 0.2, 512 * 0.025, SimulatedAgent.countCooldown(1.0),
+                SimulatedAgent.countCooldown(1.0), SimulatedAgent.countCooldown(1.0)));
 
-        this.manager.setSpawnInfected(() -> new Infected(bounds, generateRandomPosition.get(), 0.00025, 0.0,
+        this.manager.setSpawnInfected(() -> new Infected(bounds, generateRandomPosition.get(), 0.0003, 0.0,
                 512 * 0.1, 512 * 0.0125));
 
         /* Instantiate infected and controllers */
@@ -195,33 +255,18 @@ public class Launcher extends Application {
             }
         }
 
-        /* Start UI update background thread */
-        Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
+        /* Dispatch controllers start */
+        new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                Platform.runLater(() -> {
-                    for (var figure : manager.getFigures()) {
-                        var agent = figure.getAgent();
-                        var gc = canvasController.getGraphics2DFor(agent.getUuid());
-                        gc.clearRect(0,0, gc.getCanvas().getWidth(), gc.getCanvas().getWidth());
-
-                        if (!agent.isDead()) {
-                            double x = agent.getCoordinate().getX(), y = agent.getCoordinate().getY();
-                            drawRotatedImage(gc, frameDispatcher.getFrameFor(agent.getUuid()), x, y, agent.getAngle());
-                        }
-                    }
-                });
+                try {
+                    manager.startAll();
+                }
+                catch (Exception e) {
+                    System.out.printf("Launcher#doTests while trying to dispatch controller start%n");
+                }
             }
-        }, 0, 30);
-
-        /* Dispatch controllers start */
-        try {
-            this.manager.startAll();
-        }
-        catch (Exception e) {
-            System.out.printf("Launcher#doTests while trying to dispatch controller start%n");
-        }
+        }, 50);
     }
 
     @Override
@@ -246,7 +291,10 @@ public class Launcher extends Application {
         new Thread(() -> {
             try {
                 jadeJob.join();
-                Platform.runLater(this::startSimulation);
+                Platform.runLater(() -> {
+                    this.indStartup.setVisible(false);
+                    this.btnStart.setVisible(true);
+                });
             }
             catch (Exception e) {
                 System.out.printf("Launcher#start where simulation failed {%s}%n", e.getMessage());

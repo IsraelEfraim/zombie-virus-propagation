@@ -1,7 +1,7 @@
 package cc.zombies.model.agents.figures.base;
 
 /* CC imports */
-import cc.zombies.model.agents.util.AgentPredicate;
+import cc.zombies.model.agents.util.Cooldown;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.Polygon;
 import cc.zombies.model.geom.TimedCoordinate;
@@ -10,13 +10,12 @@ import cc.zombies.model.geom.internal.GeometryCalculator;
 /* Java imports */
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 
 /* JADE imports */
 import jade.core.Agent;
 
 public abstract class SimulatedAgent extends Agent {
-    public abstract class Status {
+    public static abstract class Status {
         public static final String LIVE = "live";
         public static final String DEAD = "dead";
         public static final String MISSING = "missing";
@@ -37,15 +36,15 @@ public abstract class SimulatedAgent extends Agent {
     private double angle;
     private double awarenessRadius;
     private double actionRadius;
-    private final AgentPredicate senseCooldown;
-    private final AgentPredicate commsCooldown;
-    private final AgentPredicate skillCooldown;
+    private final Cooldown senseCooldown;
+    private final Cooldown commsCooldown;
+    private final Cooldown skillCooldown;
     private final Map<String, TimedCoordinate> sensed;
     private Map<String, TimedCoordinate> lastSensed;
 
     public SimulatedAgent(String identity, String status, Polygon bounds, Coordinate coordinate, double speed,
-                            double angle, double awarenessRadius, double actionRadius, AgentPredicate senseCooldown,
-                            AgentPredicate commsCooldown, AgentPredicate skillCooldown) {
+                          double angle, double awarenessRadius, double actionRadius, Cooldown senseCooldown,
+                          Cooldown commsCooldown, Cooldown skillCooldown) {
         this.setIdentity(identity);
         this.setUuid(this.randomUUID());
         this.setStatus(status);
@@ -63,8 +62,8 @@ public abstract class SimulatedAgent extends Agent {
     }
 
     public SimulatedAgent(String identity, Polygon bounds, Coordinate coordinate, double speed, double angle,
-                            double awarenessRadius, double actionRadius, AgentPredicate senseCooldown,
-                            AgentPredicate commsCooldown, AgentPredicate skillCooldown) {
+                          double awarenessRadius, double actionRadius, Cooldown senseCooldown,
+                          Cooldown commsCooldown, Cooldown skillCooldown) {
         this.setIdentity(identity);
         this.setUuid(this.randomUUID());
         this.setStatus(Status.LIVE);
@@ -180,13 +179,13 @@ public abstract class SimulatedAgent extends Agent {
         this.actionRadius = actionRadius;
     }
 
-    public AgentPredicate getSenseCooldown() {
+    public Cooldown getSenseCooldown() {
         return senseCooldown;
     }
 
-    public AgentPredicate getCommsCooldown() { return commsCooldown; }
+    public Cooldown getCommsCooldown() { return commsCooldown; }
 
-    public AgentPredicate getSkillCooldown() { return skillCooldown; }
+    public Cooldown getSkillCooldown() { return skillCooldown; }
 
     public Map<String, TimedCoordinate> getSensed() {
         return sensed;
@@ -225,7 +224,7 @@ public abstract class SimulatedAgent extends Agent {
         return this.bounds.contains(coordinate);
     }
 
-    public boolean moveInDirectionOf(Coordinate coordinate) {
+    public void moveInDirectionOf(Coordinate coordinate) {
         var position = new Coordinate(this.coordinate.getX(), this.coordinate.getY());
 
         /*
@@ -277,9 +276,6 @@ public abstract class SimulatedAgent extends Agent {
 
         if (this.canMoveTo(coordinate)) {
             this.setCoordinate(position);
-            return true;
-        } else {
-            return false;
         }
     }
 
@@ -298,16 +294,31 @@ public abstract class SimulatedAgent extends Agent {
         }
     }
 
-    public static AgentPredicate countCooldown(Double limit) {
-        var n = new AtomicReference<>(0.0);
+    public static Cooldown countCooldown(Double limit) {
+        var timing = new AtomicReference<>(0.0);
+        var coolingDown = new AtomicReference<>(false);
 
-        return (agent) -> {
-            var result = n.updateAndGet(v -> v + agent.getSpeed());
-            if (result >= limit) {
-                n.set(0.0);
-                return true;
+        return new Cooldown() {
+            @Override
+            public boolean check(SimulatedAgent agent) {
+                var available = !coolingDown.get();
+
+                if (!available) {
+                    var result = timing.updateAndGet(v -> v + agent.getSpeed());
+                    if (result >= limit) {
+                        timing.set(0.0);
+                        coolingDown.set(false);
+                        available = true;
+                    }
+                }
+
+                return available;
             }
-            return false;
+
+            @Override
+            public void use() {
+                coolingDown.compareAndSet(false, true);
+            }
         };
     }
 }

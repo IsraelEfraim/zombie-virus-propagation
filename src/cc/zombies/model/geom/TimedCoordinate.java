@@ -46,4 +46,9 @@ public class TimedCoordinate {
         return String.format("TimedCoordinate{coordinate:%s, description:%s, epoch:%d}",
                 this.getCoordinate(), this.getDescription(), this.getEpoch());
     }
+
+    public boolean equals(TimedCoordinate other) {
+        return this.getCoordinate().equals(other.getCoordinate())
+                && this.getDescription().equals(other.getDescription());
+    }
 }

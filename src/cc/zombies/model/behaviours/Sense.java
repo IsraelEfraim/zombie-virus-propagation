@@ -2,7 +2,7 @@ package cc.zombies.model.behaviours;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
-import cc.zombies.model.agents.util.AgentPredicate;
+import cc.zombies.model.agents.util.Cooldown;
 import cc.zombies.model.behaviours.base.PeriodicBehaviour;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.TimedCoordinate;
@@ -12,7 +12,7 @@ import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 
 public class Sense extends PeriodicBehaviour {
-    public Sense(SimulatedAgent agent, AgentPredicate cooldown) {
+    public Sense(SimulatedAgent agent, Cooldown cooldown) {
         super(agent, cooldown);
     }
 
@@ -57,7 +57,7 @@ public class Sense extends PeriodicBehaviour {
             }
         }
         else {
-            if (this.cooldown.apply(this.agent)) {
+            if (this.cooldown.check(this.agent)) {
                 try {
                     var request = new ACLMessage(ACLMessage.REQUEST);
                     request.addReceiver(new AID(
@@ -67,6 +67,8 @@ public class Sense extends PeriodicBehaviour {
                     request.setContent(String.format("%.8f %.8f %.8f", this.agent.getCoordinate().getX(),
                             this.agent.getCoordinate().getY(), this.agent.getAwarenessRadius()));
                     this.agent.send(request);
+
+                    this.agent.getSenseCooldown().use();
                 }
                 catch (Exception e) {
                     System.out.printf("Sense#action where couldn't sent message to container ds%n");
@@ -76,5 +78,5 @@ public class Sense extends PeriodicBehaviour {
     }
 
     @Override
-    public boolean done() { return false; }
+    public boolean done() { return this.agent.isDead(); }
 }

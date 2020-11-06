@@ -20,14 +20,12 @@ public class SelectiveBehaviour extends SimulationBehaviour {
     @Override
     public void action() {
         for (var behaviour : this.behaviours) {
-            if (behaviour.getKey().get()) {
+            if (behaviour.getKey().get() && !behaviour.getValue().done()) {
                 behaviour.getValue().action();
             }
         }
     }
 
     @Override
-    public boolean done() {
-        return false;
-    }
+    public boolean done() { return this.agent.isDead(); }
 }

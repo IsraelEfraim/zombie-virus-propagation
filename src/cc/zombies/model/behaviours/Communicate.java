@@ -2,7 +2,7 @@ package cc.zombies.model.behaviours;
 
 /* CC imports */
 import cc.zombies.model.agents.figures.base.SimulatedAgent;
-import cc.zombies.model.agents.util.AgentPredicate;
+import cc.zombies.model.agents.util.Cooldown;
 import cc.zombies.model.behaviours.base.PeriodicBehaviour;
 import cc.zombies.model.geom.Coordinate;
 import cc.zombies.model.geom.TimedCoordinate;
@@ -15,7 +15,7 @@ import jade.core.AID;
 import jade.lang.acl.ACLMessage;
 
 public class Communicate extends PeriodicBehaviour {
-    public Communicate(SimulatedAgent agent, AgentPredicate cooldown) {
+    public Communicate(SimulatedAgent agent, Cooldown cooldown) {
         super(agent, cooldown);
     }
 
@@ -43,7 +43,7 @@ public class Communicate extends PeriodicBehaviour {
                         if (sensed.containsKey(args[0])) {
                             var last = sensed.get(args[0]);
 
-                            if (last.getEpoch() < epoch) {
+                            if (!last.equals(tc) && last.getEpoch() < epoch) {
                                 sensed.put(args[0], tc);
                                 System.out.printf("[%s] was updated about {%s}%n", this.agent.getUuid(), args[0]);
                             }
@@ -52,13 +52,12 @@ public class Communicate extends PeriodicBehaviour {
                             sensed.put(args[0], tc);
                             System.out.printf("[%s] was told about {%s}%n", this.agent.getUuid(), args[0]);
                         }
-                        System.out.printf("Oiii%n");
                     }
                 }
             }
         }
 
-        if (this.cooldown.apply(this.agent)) {
+        if (this.cooldown.check(this.agent)) {
             var threats = this.agent.getSensed().entrySet().stream().filter(
                     (entry) -> SimulatedAgent.getTypeByUuid(entry.getKey()).equalsIgnoreCase("Infected"))
                                     .collect(Collectors.toList()
@@ -89,11 +88,13 @@ public class Communicate extends PeriodicBehaviour {
                     this.agent.send(warning);
                 }
             }
+
+            this.agent.getCommsCooldown().use();
         }
     }
 
     @Override
     public boolean done() {
-        return !this.agent.isDead();
+        return this.agent.isDead();
     }
 }
