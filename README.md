@@ -1,11 +1,11 @@
 # zombie-virus-propagation
 Multi-agent System (MAS) to solve a fictional zombie virus propagation in Java using JADE framework.
 
-# Dependencies
+## Dependencies
 
 These are necessary dependencies in order to run: JADE, JavaFX, JFoenix. All of them are under ./lib folder, just make sure to add them to the project's libraries in your IDE.
 
-# VM Options
+## VM Options
 
 You must add these VM options in order to run:
 
